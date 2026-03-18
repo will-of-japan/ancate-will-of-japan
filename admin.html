@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WOJ アンケート管理</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-wrapper">
+    <header class="site-header">
+      <div class="header-logo">縁日</div>
+      <h1 class="header-title">ア ン ケ ー ト 管 理</h1>
+      <p class="header-sub">WOJ Survey Admin</p>
+      <span class="header-rule">━━━━━━━━━━━━━━━</span>
+    </header>
+
+    <main class="container">
+      <!-- Login -->
+      <div id="login-screen">
+        <div class="card card-decorated" style="max-width:360px; margin:0 auto;">
+          <div class="corner-inner">
+            <p class="section-title text-center" style="margin-bottom:20px">管理者ログイン</p>
+            <div class="form-group">
+              <label class="form-label">パスワード</label>
+              <input type="password" id="admin-password" class="form-input" placeholder="管理パスワードを入力" onkeydown="if(event.key==='Enter')adminLogin()">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="adminLogin()">ロ グ イ ン</button>
+            <div id="login-error" class="mt-8 hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="admin-screen" class="hidden">
+        <div class="flex justify-between items-center mb-16">
+          <p class="section-title" style="margin-bottom:0;padding-bottom:0">アンケート一覧</p>
+          <button class="btn btn-secondary btn-sm" onclick="openSurveyModal()">＋ 新規作成</button>
+        </div>
+        <div id="admin-survey-list"></div>
+
+        <div class="divider">◇ ◇ ◇</div>
+
+        <div id="question-editor" class="hidden">
+          <div class="flex justify-between items-center mb-16">
+            <p class="section-title" style="margin-bottom:0;padding-bottom:0"><span id="editor-survey-name"></span> の質問</p>
+            <button class="btn btn-secondary btn-sm" onclick="openQuestionModal()">＋ 質問追加</button>
+          </div>
+          <div id="question-list"></div>
+          <div id="no-questions" class="hidden"><div class="alert alert-info">質問がありません。「＋ 質問追加」から追加してください。</div></div>
+        </div>
+
+        <div class="divider">◇ ◇ ◇</div>
+
+        <div id="response-viewer" class="hidden">
+          <div class="flex justify-between items-center mb-16">
+            <p class="section-title" style="margin-bottom:0;padding-bottom:0">回答データ</p>
+            <button class="btn btn-secondary btn-sm" onclick="exportCsv()">CSV出力</button>
+          </div>
+          <div id="response-summary" class="mb-16"></div>
+          <div style="overflow-x:auto"><table id="response-table" class="response-table"></table></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-logo">縁日</div>
+      <p class="footer-text">Will of Japan — Admin</p>
+      <p class="footer-mark">◆ ◇ ◆</p>
+    </footer>
+  </div>
+
+  <!-- Survey Modal -->
+  <div id="survey-modal" class="modal-overlay">
+    <div class="modal">
+      <p class="modal-title" id="survey-modal-title">アンケートを作成</p>
+      <div class="form-group">
+        <label class="form-label">タイトル <span class="required">必須</span></label>
+        <input type="text" id="modal-survey-title" class="form-input" placeholder="例：3月イベント満足度調査">
+      </div>
+      <div class="form-group">
+        <label class="form-label">説明</label>
+        <textarea id="modal-survey-desc" class="form-textarea" placeholder="アンケートの説明文"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary btn-sm" onclick="closeSurveyModal()">キャンセル</button>
+        <button class="btn btn-primary btn-sm" onclick="saveSurvey()">保 存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Question Modal (with branch rules) -->
+  <div id="question-modal" class="modal-overlay">
+    <div class="modal">
+      <p class="modal-title" id="question-modal-title">質問を追加</p>
+      <div class="form-group">
+        <label class="form-label">質問文 <span class="required">必須</span></label>
+        <input type="text" id="modal-q-title" class="form-input" placeholder="例：イベントの満足度を教えてください">
+      </div>
+      <div class="form-group">
+        <label class="form-label">回答タイプ</label>
+        <select id="modal-q-type" class="form-select" onchange="onTypeChange()">
+          <option value="text">テキスト（1行）</option>
+          <option value="textarea">自由記述（複数行）</option>
+          <option value="radio">単一選択（ラジオ）</option>
+          <option value="checkbox">複数選択（チェック）</option>
+          <option value="select">プルダウン</option>
+        </select>
+      </div>
+      <div class="form-group" id="options-field" style="display:none">
+        <label class="form-label">選択肢（カンマ区切り）</label>
+        <input type="text" id="modal-q-options" class="form-input" placeholder="例：とても良い,良い,普通,悪い" oninput="updateBranchUI()">
+      </div>
+      <div class="form-group">
+        <div class="option-item" style="display:inline-flex;width:auto">
+          <input type="checkbox" id="modal-q-required">
+          <label for="modal-q-required">必須にする</label>
+        </div>
+      </div>
+
+      <!-- Branch rules section -->
+      <div id="branch-section" style="display:none">
+        <div class="divider-sm">◆</div>
+        <p class="form-label" style="margin-bottom:12px">分岐設定 <span style="font-size:10px;color:var(--text-mute);font-family:'Noto Sans JP',sans-serif">（選択肢ごとの遷移先）</span></p>
+        <div id="branch-rules-container"></div>
+        <div class="form-group mt-16">
+          <label class="form-label">デフォルト遷移先 <span style="font-size:10px;color:var(--text-mute);font-family:'Noto Sans JP',sans-serif">（分岐に該当しない場合）</span></label>
+          <select id="modal-q-next-default" class="form-select"></select>
+        </div>
+      </div>
+
+      <!-- Non-branching next_default -->
+      <div id="next-default-section" style="display:none">
+        <div class="divider-sm">◆</div>
+        <div class="form-group">
+          <label class="form-label">次の質問 <span style="font-size:10px;color:var(--text-mute);font-family:'Noto Sans JP',sans-serif">（空欄ならorder順）</span></label>
+          <select id="modal-q-next-default-simple" class="form-select"></select>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary btn-sm" onclick="closeQuestionModal()">キャンセル</button>
+        <button class="btn btn-primary btn-sm" onclick="saveQuestion()">保 存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="loading-overlay"><span class="loading-text">処理中...</span></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
