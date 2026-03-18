@@ -1,3 +1,3 @@
 const CONFIG = {
-  API_BASE: 'https://script.google.com/macros/s/AKfycbwXZGr7ZeMDfHTkKLy5uSwhEJP0bUiI-_BLlPNz8jUtHWDUGcN9dQlaCfoB0c-qQD7X/exec',
+  API_BASE: 'https://script.google.com/macros/s/AKfycbzgNsvIOgLkzhCLDZgJxgws12ni4FjkPnM6hrnMMk_j8qmCUb9EnatSAj41qh8JlRGC/exec',
 };
